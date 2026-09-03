@@ -19,11 +19,19 @@ CORS_ALLOWED_ORIGINS = [
 if not CORS_ALLOWED_ORIGINS and os.environ.get("FRONTEND_URL"):
     CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
 
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r.strip() for r in os.environ.get("CORS_ALLOWED_ORIGIN_REGEXES", "").split(",") if r.strip()
+]
+if not CORS_ALLOWED_ORIGIN_REGEXES:
+    CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.vercel\.app$"]
+
 CSRF_TRUSTED_ORIGINS = [
     o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
 ]
 if not CSRF_TRUSTED_ORIGINS and os.environ.get("FRONTEND_URL"):
     CSRF_TRUSTED_ORIGINS = [os.environ["FRONTEND_URL"]]
+if "https://*.vercel.app" not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append("https://*.vercel.app")
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")  # noqa: F405
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"

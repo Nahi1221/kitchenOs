@@ -147,17 +147,21 @@ BREVO_SMTP_USER = env('BREVO_SMTP_USER', default='')
 BREVO_SMTP_PASSWORD = env('BREVO_SMTP_PASSWORD', default='')
 BREVO_FROM_EMAIL = env('BREVO_FROM_EMAIL', default='noreply@kitchenos.app')
 
-# Add Railway/production friendly host and frontend origin settings.
+# Add production-friendly host and frontend origin settings.
 FRONTEND_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:5173',
     'http://localhost:5174',
     FRONTEND_URL,
 ])
+if 'https://*.vercel.app' not in FRONTEND_ORIGINS:
+    FRONTEND_ORIGINS.append('https://*.vercel.app')
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:5173',
     'http://localhost:5174',
     FRONTEND_URL,
 ])
+if 'https://*.vercel.app' not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append('https://*.vercel.app')
 
 # ============================================
 # STATIC FILES
