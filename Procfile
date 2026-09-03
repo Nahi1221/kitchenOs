@@ -1,1 +1,1 @@
-web: gunicorn kitchenos.wsgi --preload --log-file - --log-level info
+web: gunicorn kitchenos.wsgi:application --preload --log-file - --log-level info
