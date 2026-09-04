@@ -13,18 +13,27 @@ ALLOWED_HOSTS = [
     ).split(",") if h.strip()
 ]
 
-raw_cors = [
-    o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()
-]
-CORS_ALLOWED_ORIGINS = []
-for origin in raw_cors:
-    if origin.lower() == "https://cuisine.friespowered.net":
-        continue
-    CORS_ALLOWED_ORIGINS.append(origin)
+def _sanitize_allowed_origins(raw_values):
+    sanitized = []
+    for origin in raw_values:
+        cleaned = str(origin).strip()
+        if not cleaned:
+            continue
+        lower = cleaned.lower()
+        if 'friespowered.net' in lower or 'cuisine.' in lower:
+            continue
+        if cleaned not in sanitized:
+            sanitized.append(cleaned)
+    return sanitized
+
+raw_cors = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+CORS_ALLOWED_ORIGINS = _sanitize_allowed_origins(raw_cors)
 if not CORS_ALLOWED_ORIGINS and os.environ.get("FRONTEND_URL"):
     CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_URL"]]
 if os.environ.get("FRONTEND_URL") and os.environ["FRONTEND_URL"] not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(os.environ["FRONTEND_URL"])
+if "https://*.vercel.app" not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append("https://*.vercel.app")
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r.strip() for r in os.environ.get("CORS_ALLOWED_ORIGIN_REGEXES", "").split(",") if r.strip()
@@ -32,14 +41,8 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 if not CORS_ALLOWED_ORIGIN_REGEXES:
     CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.vercel\.app$"]
 
-raw_csrf = [
-    o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
-]
-CSRF_TRUSTED_ORIGINS = []
-for origin in raw_csrf:
-    if origin.lower() == "https://cuisine.friespowered.net":
-        continue
-    CSRF_TRUSTED_ORIGINS.append(origin)
+raw_csrf = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+CSRF_TRUSTED_ORIGINS = _sanitize_allowed_origins(raw_csrf)
 if not CSRF_TRUSTED_ORIGINS and os.environ.get("FRONTEND_URL"):
     CSRF_TRUSTED_ORIGINS = [os.environ["FRONTEND_URL"]]
 if os.environ.get("FRONTEND_URL") and os.environ["FRONTEND_URL"] not in CSRF_TRUSTED_ORIGINS:

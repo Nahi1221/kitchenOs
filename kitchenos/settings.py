@@ -158,35 +158,34 @@ BREVO_SMTP_PASSWORD = env('BREVO_SMTP_PASSWORD', default='')
 BREVO_FROM_EMAIL = env('BREVO_FROM_EMAIL', default='noreply@kitchenos.app')
 
 # Add production-friendly host and frontend origin settings.
-FRONTEND_ORIGINS = []
-for origin in env.list('CORS_ALLOWED_ORIGINS', default=[
+def _sanitize_allowed_origins(raw_values):
+    sanitized = []
+    for origin in raw_values:
+        cleaned = str(origin).strip()
+        if not cleaned:
+            continue
+        lower = cleaned.lower()
+        if 'friespowered.net' in lower or 'cuisine.' in lower:
+            continue
+        if cleaned not in sanitized:
+            sanitized.append(cleaned)
+    return sanitized
+
+FRONTEND_ORIGINS = _sanitize_allowed_origins(env.list('CORS_ALLOWED_ORIGINS', default=[
     'http://localhost:5173',
     'http://localhost:5174',
     FRONTEND_URL,
-]):
-    cleaned = str(origin).strip()
-    if not cleaned:
-        continue
-    if cleaned.lower() == 'https://cuisine.friespowered.net':
-        continue
-    FRONTEND_ORIGINS.append(cleaned)
+]))
 if FRONTEND_URL and FRONTEND_URL not in FRONTEND_ORIGINS:
     FRONTEND_ORIGINS.append(FRONTEND_URL)
 if 'https://*.vercel.app' not in FRONTEND_ORIGINS:
     FRONTEND_ORIGINS.append('https://*.vercel.app')
 
-CSRF_TRUSTED_ORIGINS = []
-for origin in env.list('CSRF_TRUSTED_ORIGINS', default=[
+CSRF_TRUSTED_ORIGINS = _sanitize_allowed_origins(env.list('CSRF_TRUSTED_ORIGINS', default=[
     'http://localhost:5173',
     'http://localhost:5174',
     FRONTEND_URL,
-]):
-    cleaned = str(origin).strip()
-    if not cleaned:
-        continue
-    if cleaned.lower() == 'https://cuisine.friespowered.net':
-        continue
-    CSRF_TRUSTED_ORIGINS.append(cleaned)
+]))
 if FRONTEND_URL and FRONTEND_URL not in CSRF_TRUSTED_ORIGINS:
     CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
 if 'https://*.vercel.app' not in CSRF_TRUSTED_ORIGINS:
