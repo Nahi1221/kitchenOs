@@ -116,9 +116,26 @@ class AdminApprovalListView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        qs = Payment.objects.filter(status='PENDING').select_related('user')
-        serializer = AdminApprovalSerializer(qs, many=True, context={'request': request})
+        payment_qs = Payment.objects.filter(status='PENDING').select_related('user')
+        payment_user_ids = set(payment_qs.values_list('user_id', flat=True))
+
+        pending_users = User.objects.filter(
+            user_type='tenant',
+            status='PENDING_APPROVAL'
+        ).exclude(id__in=payment_user_ids)
+
+        combined = list(payment_qs) + [
+            self._build_pending_payment_from_user(user)
+            for user in pending_users
+        ]
+
+        serializer = AdminApprovalSerializer(combined, many=True, context={'request': request})
         return Response(serializer.data)
+
+    def _build_pending_payment_from_user(self, user):
+        payment = Payment(user=user, amount=0, method='bank_transfer', reference_number='', notes='', status='PENDING')
+        payment._is_virtual_pending = True
+        return payment
 
 class AdminApproveView(APIView):
     permission_classes = [IsAdminUser]
@@ -127,7 +144,21 @@ class AdminApproveView(APIView):
         try:
             payment = Payment.objects.get(pk=pk)
         except Payment.DoesNotExist:
-            return Response({'error': 'Payment not found.'}, status=404)
+            try:
+                user = User.objects.get(pk=pk, user_type='tenant', status='PENDING_APPROVAL')
+            except User.DoesNotExist:
+                return Response({'error': 'Payment or pending tenant not found.'}, status=404)
+            payment = Payment.objects.create(
+                user=user,
+                amount=0,
+                method='bank_transfer',
+                reference_number='',
+                notes='Auto-created for pending approval flow',
+                status='APPROVED',
+            )
+        else:
+            user = payment.user
+
         payment.status = 'APPROVED'
         payment.save()
         user = payment.user
@@ -335,17 +366,26 @@ class AdminSubscriptionExtendView(APIView):
             subscription = Subscription.objects.get(pk=pk)
         except Subscription.DoesNotExist:
             return Response({'error': 'Subscription not found.'}, status=404)
-        months = request.data.get('months', 1)
-        try:
-            months = int(months)
-        except (TypeError, ValueError):
-            months = 1
-        if subscription.status in ['EXPIRED', 'CANCELLED']:
-            subscription.status = 'ACTIVE'
-            subscription.start_date = timezone.now()
-            subscription.end_date = timezone.now() + timedelta(days=30 * months)
+
+        end_date = request.data.get('end_date')
+        if end_date:
+            try:
+                subscription.end_date = timezone.datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            except ValueError:
+                return Response({'error': 'Invalid end_date format. Use YYYY-MM-DD.'}, status=400)
         else:
-            subscription.end_date = subscription.end_date + timedelta(days=30 * months)
+            months = request.data.get('months', 1)
+            try:
+                months = int(months)
+            except (TypeError, ValueError):
+                months = 1
+            if subscription.status in ['EXPIRED', 'CANCELLED']:
+                subscription.status = 'ACTIVE'
+                subscription.start_date = timezone.now()
+                subscription.end_date = timezone.now() + timedelta(days=30 * months)
+            else:
+                subscription.end_date = subscription.end_date + timedelta(days=30 * months)
+
         subscription.save()
         return Response({'message': 'Subscription extended.', 'end_date': subscription.end_date.isoformat()})
 

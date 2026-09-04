@@ -200,6 +200,8 @@ class PublicMenuView(viewsets.ViewSet):
                     'price': item.price,
                     'currency': item.currency,
                     'image_url': item.image_url,
+                    'featured': item.featured,
+                    'is_out_of_stock': item.is_out_of_stock,
                 })
             categories.append({
                 'id': cat.id,

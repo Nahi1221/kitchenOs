@@ -76,6 +76,7 @@ class AdminTenantSerializer(serializers.ModelSerializer):
         return obj.branches.count()
 
 class AdminApprovalSerializer(serializers.ModelSerializer):
+    id = serializers.SerializerMethodField()
     business_name = serializers.CharField(source='user.business_name', read_only=True)
     name = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -85,6 +86,9 @@ class AdminApprovalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = ['id', 'business_name', 'name', 'email', 'date', 'amount', 'screenshot', 'method', 'reference_number', 'notes']
+
+    def get_id(self, obj):
+        return getattr(obj, 'user_id', None) or getattr(obj, 'id', None)
 
     def get_name(self, obj):
         return f"{obj.user.first_name} {obj.user.last_name}".strip()
