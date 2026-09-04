@@ -33,11 +33,21 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # SECURITY
 # ============================================
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-your-secret-key-here')
-DEBUG = env('DEBUG', default=False)  # False is safer for Railway
+DEBUG = env('DEBUG', default=False)
+
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[
     'localhost',
     '127.0.0.1',
 ])
+
+# Auto-append your hosting platform's hostname (Render sets RENDER_EXTERNAL_HOSTNAME,
+# Railway sets RAILWAY_STATIC_URL, PythonAnywhere sets nothing — defaults are fine)
+_render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
+_railway_url = os.environ.get('RAILWAY_STATIC_URL')
+if _railway_url and _railway_url not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_url)
 
 # ============================================
 # INSTALLED APPS
